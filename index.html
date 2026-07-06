@@ -667,7 +667,7 @@
       setTimeout(beginRound, 550);
     } else {
       recordMistakeIfFrancais(q);
-      setTimeout(function(){ endGame(); }, 700);
+      setTimeout(function(){ endGame(); }, state.mode === "francais" ? 5000 : 700);
     }
   }
 
@@ -678,7 +678,7 @@
     var buttons = lockAnswers();
     buttons[q.correctIndex].classList.add("good");
     recordMistakeIfFrancais(q);
-    setTimeout(function(){ endGame(); }, 700);
+    setTimeout(function(){ endGame(); }, state.mode === "francais" ? 5000 : 700);
   }
 
   function endGame(){
