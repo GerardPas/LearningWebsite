@@ -152,7 +152,9 @@
   margin-bottom:18px;
 }
 .stage.mode-review .timer-track,
-.stage.mode-review .timer-digit{display:none;}
+.stage.mode-review .timer-digit,
+.stage.no-timer .timer-track,
+.stage.no-timer .timer-digit{display:none;}
 .quit-btn{
   width:34px;height:34px;border-radius:50%;
   border:1px solid var(--ink-3);background:var(--ink-2);color:var(--text-dim);
@@ -182,9 +184,19 @@
 .timer-digit.critical{color:var(--bad);}
 
 .question-zone{
-  min-height:96px;display:flex;align-items:center;justify-content:center;
-  text-align:center;margin-bottom:30px;padding:0 6px;
+  min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;text-align:center;margin-bottom:30px;padding:0 6px;
 }
+.speak-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--ink-3);background:var(--ink-2);color:var(--text-dim);
+  border-radius:999px;padding:9px 18px;font-size:14px;font-family:var(--font-body);
+  cursor:pointer;transition:border-color .15s ease,color .15s ease;
+}
+.speak-btn:hover{border-color:var(--francais);color:var(--text);}
+.speak-btn:active{transform:scale(.97);}
+.speak-btn:focus-visible{outline:2px solid var(--francais);outline-offset:2px;}
+.speak-btn[hidden]{display:none;}
 .question-text{
   font-family:var(--font-display);font-weight:800;
   font-size:clamp(22px,5.5vw,32px);letter-spacing:-.01em;
@@ -235,6 +247,73 @@
 .btn-secondary{background:transparent;border-color:var(--ink-3);color:var(--text-dim);}
 .btn-secondary:hover{color:var(--text);border-color:var(--accent);}
 .btn-primary:focus-visible,.btn-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* TOPBAR RIGHT + SETTINGS BUTTON */
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.settings-btn{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  border:1px solid var(--ink-3);background:var(--ink-2);color:var(--text-dim);
+  font-size:16px;line-height:1;cursor:pointer;
+  transition:color .15s ease,border-color .15s ease;
+}
+.settings-btn:hover{color:var(--text);border-color:var(--accent);}
+.settings-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* PRACTICE STRIP (entraînement) */
+.practice-strip{margin-top:16px;}
+.practice-strip .review-count{background:var(--francais-soft);color:var(--francais);font-size:13px;}
+.practice-strip:hover{border-color:var(--francais);transform:translateY(-2px);}
+
+/* SETTINGS MODAL */
+.settings-overlay{
+  position:fixed;inset:0;z-index:50;background:rgba(6,7,12,.66);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.settings-overlay.open{display:flex;}
+.settings-modal{
+  width:100%;max-width:430px;background:var(--ink-2);
+  border:1px solid var(--ink-3);border-radius:var(--radius);
+  padding:22px 22px 8px;max-height:88vh;overflow:auto;
+}
+.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.settings-title{font-family:var(--font-display);font-weight:800;font-size:19px;margin:0;}
+.settings-desc{color:var(--text-dim);font-size:13px;margin:0 0 8px;line-height:1.5;}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:13px 2px;border-top:1px solid var(--ink-3);
+}
+.settings-row:first-of-type{border-top:none;}
+.settings-row-label{font-size:14.5px;}
+.settings-row-sub{display:block;color:var(--text-dim);font-size:12px;margin-top:2px;line-height:1.4;}
+.settings-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--francais);cursor:pointer;flex-shrink:0;}
+.settings-row select{
+  background:var(--ink-3);color:var(--text);border:1px solid var(--ink-3);
+  border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:13.5px;cursor:pointer;flex-shrink:0;
+}
+.settings-row input[type=checkbox]:focus-visible,
+.settings-row select:focus-visible{outline:2px solid var(--francais);outline-offset:2px;}
+
+/* READING-COMFORT OPTIONS (dyslexia) */
+.stage.comfort .question-text{letter-spacing:.06em;line-height:1.5;}
+.stage.comfort .answer-btn{letter-spacing:.05em;word-spacing:.12em;line-height:1.5;}
+.stage.comfort .mode-card-label{letter-spacing:.03em;}
+.stage.comfort .home-sub,
+.stage.comfort .review-title,
+.stage.comfort .review-sub{letter-spacing:.02em;line-height:1.7;}
+
+.stage.dys-font{
+  --font-display:"Trebuchet MS","Comic Sans MS",Verdana,Tahoma,sans-serif;
+  --font-body:"Trebuchet MS",Verdana,Tahoma,sans-serif;
+}
+.stage.dys-font .answer-btn{font-family:var(--font-body);font-variant-numeric:normal;}
+
+.stage.text-lg .question-text{font-size:clamp(26px,6.8vw,38px);}
+.stage.text-lg .answer-btn{font-size:20px;}
+.stage.text-lg .home-sub{font-size:17px;}
+.stage.text-lg .speak-btn{font-size:15.5px;}
+
+.stage.calm .mode-card-icon{display:none;}
+.stage.calm *{animation:none !important;transition:none !important;}
 </style>
 
 <div class="stage" id="stage" data-view="home">
@@ -243,12 +322,15 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span class="brand-name">Chrono Défi</span>
     </div>
-    <div class="best-scores" id="bestScores">Meilleur score — Maths <b>0</b> · Français <b>0</b></div>
+    <div class="topbar-right">
+      <div class="best-scores" id="bestScores">Meilleur score — Maths <b>0</b> · Français <b>0</b></div>
+      <button class="settings-btn" id="settingsBtn" type="button" aria-label="Réglages">⚙</button>
+    </div>
   </div>
 
   <section class="view view-home" data-view-name="home">
     <h1 class="home-title">Choisis ton défi</h1>
-    <p class="home-sub">Réponds juste, le temps se resserre à chaque bonne réponse. Une erreur ou le chrono à zéro, et la partie s'arrête.</p>
+    <p class="home-sub">Relève un défi chronométré, ou entraîne-toi à ton rythme, sans pression. Le bouton ⚙ règle le confort de lecture.</p>
     <div class="mode-grid">
       <button class="mode-card mode-maths" data-mode="maths" type="button">
         <span class="mode-card-icon" aria-hidden="true">
@@ -274,6 +356,14 @@
       </button>
     </div>
 
+    <button class="review-strip practice-strip" id="practiceCard" type="button">
+      <span class="review-info">
+        <span class="review-title">Français · Entraînement</span>
+        <span class="review-sub">Sans chrono, sans pression — le mot est lu à voix haute</span>
+      </span>
+      <span class="review-count" aria-hidden="true">▶</span>
+    </button>
+
     <button class="review-strip" id="reviewCard" type="button" disabled>
       <span class="review-info">
         <span class="review-title">Français · Révision des erreurs</span>
@@ -293,6 +383,7 @@
     <div class="timer-digit" id="timerDigit">0.0</div>
     <div class="question-zone">
       <p class="question-text" id="questionText"></p>
+      <button class="speak-btn" id="speakBtn" type="button" hidden>🔊 Écouter le mot</button>
     </div>
     <div class="answers-grid" id="answersGrid"></div>
   </section>
@@ -306,6 +397,49 @@
       <button class="btn-secondary" id="homeBtn" type="button">Accueil</button>
     </div>
   </section>
+
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Réglages">
+      <div class="settings-head">
+        <h2 class="settings-title">Réglages</h2>
+        <button class="quit-btn" id="settingsClose" type="button" aria-label="Fermer">×</button>
+      </div>
+      <p class="settings-desc">Options de confort de lecture et d'aide, pensées pour les élèves dys. Elles sont mémorisées sur cet appareil.</p>
+
+      <div class="settings-row" id="rowAudio">
+        <span><span class="settings-row-label">Bouton « écouter le mot »</span><span class="settings-row-sub">Lire le mot à voix haute (synthèse vocale)</span></span>
+        <input type="checkbox" id="setAudio" aria-label="Bouton écouter le mot">
+      </div>
+      <div class="settings-row" id="rowAutoSpeak">
+        <span><span class="settings-row-label">Lecture automatique</span><span class="settings-row-sub">Prononcer le mot à chaque question</span></span>
+        <input type="checkbox" id="setAutoSpeak" aria-label="Lecture automatique">
+      </div>
+      <div class="settings-row">
+        <span><span class="settings-row-label">Espacement confortable</span><span class="settings-row-sub">Plus d'espace entre les lettres et les lignes</span></span>
+        <input type="checkbox" id="setComfort" aria-label="Espacement confortable">
+      </div>
+      <div class="settings-row">
+        <span><span class="settings-row-label">Police adaptée</span><span class="settings-row-sub">Caractères plus lisibles</span></span>
+        <input type="checkbox" id="setFont" aria-label="Police adaptée">
+      </div>
+      <div class="settings-row">
+        <span><span class="settings-row-label">Texte plus grand</span></span>
+        <input type="checkbox" id="setBig" aria-label="Texte plus grand">
+      </div>
+      <div class="settings-row">
+        <span><span class="settings-row-label">Affichage calme</span><span class="settings-row-sub">Moins d'animations et de décors</span></span>
+        <input type="checkbox" id="setCalm" aria-label="Affichage calme">
+      </div>
+      <div class="settings-row">
+        <span><span class="settings-row-label">Chrono</span><span class="settings-row-sub">Vitesse du minuteur dans les défis</span></span>
+        <select id="setTimer" aria-label="Vitesse du chrono">
+          <option value="normal">Normal</option>
+          <option value="slow">Ralenti</option>
+          <option value="off">Désactivé</option>
+        </select>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="words.js" charset="utf-8"></script>
@@ -329,6 +463,21 @@
   var scoreLabel = document.getElementById("scoreLabel");
   var roundLabel = document.getElementById("roundLabel");
   var reviewCard = document.getElementById("reviewCard");
+  var speakBtn = document.getElementById("speakBtn");
+  var practiceCard = document.getElementById("practiceCard");
+  var quitBtn = document.getElementById("quitBtn");
+  var settingsBtn = document.getElementById("settingsBtn");
+  var settingsOverlay = document.getElementById("settingsOverlay");
+  var settingsClose = document.getElementById("settingsClose");
+  var setAudio = document.getElementById("setAudio");
+  var setAutoSpeak = document.getElementById("setAutoSpeak");
+  var setComfort = document.getElementById("setComfort");
+  var setFont = document.getElementById("setFont");
+  var setBig = document.getElementById("setBig");
+  var setCalm = document.getElementById("setCalm");
+  var setTimer = document.getElementById("setTimer");
+  var rowAudio = document.getElementById("rowAudio");
+  var rowAutoSpeak = document.getElementById("rowAutoSpeak");
 
   var TIMER_CONFIG = {
     maths: { base: 18000, decrement: 700, floor: 6000 },
@@ -341,10 +490,96 @@
   var state = {
     mode: null, round: 1, score: 0,
     currentQuestion: null,
-    rafId: null, answered: false
+    rafId: null, answered: false,
+    calmSeen: 0, calmCorrect: 0, calmRetry: []
   };
 
   function showView(name){ stage.dataset.view = name; }
+
+  /* ---- Réglages (confort de lecture, audio) ---- */
+  var SETTINGS_KEY = "chronodefi-settings";
+  var DEFAULT_SETTINGS = {
+    audio: true, autoSpeak: false, comfortSpacing: false,
+    dyslexiaFont: false, biggerText: false, calmVisuals: false, timerMode: "normal"
+  };
+  var memorySettings = null;
+  var settings = null;
+
+  function loadSettings(){
+    var stored = null;
+    try {
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      stored = raw ? JSON.parse(raw) : memorySettings;
+    } catch (err){ stored = memorySettings; }
+    var s = {};
+    for (var k in DEFAULT_SETTINGS){ if (DEFAULT_SETTINGS.hasOwnProperty(k)) s[k] = DEFAULT_SETTINGS[k]; }
+    if (stored && typeof stored === "object"){
+      for (var k2 in stored){ if (s.hasOwnProperty(k2)) s[k2] = stored[k2]; }
+    }
+    return s;
+  }
+
+  function saveSettings(s){
+    memorySettings = s;
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+    catch (err){ /* memorySettings garde l'état de la session */ }
+  }
+
+  function applySettings(){
+    if (!speechSupported){ settings.audio = false; settings.autoSpeak = false; }
+    stage.classList.toggle("comfort", !!settings.comfortSpacing);
+    stage.classList.toggle("dys-font", !!settings.dyslexiaFont);
+    stage.classList.toggle("text-lg", !!settings.biggerText);
+    stage.classList.toggle("calm", !!settings.calmVisuals);
+    if (setAudio) setAudio.checked = !!settings.audio;
+    if (setAutoSpeak) setAutoSpeak.checked = !!settings.autoSpeak;
+    if (setComfort) setComfort.checked = !!settings.comfortSpacing;
+    if (setFont) setFont.checked = !!settings.dyslexiaFont;
+    if (setBig) setBig.checked = !!settings.biggerText;
+    if (setCalm) setCalm.checked = !!settings.calmVisuals;
+    if (setTimer) setTimer.value = settings.timerMode || "normal";
+  }
+
+  function bindSetting(el, key, isCheckbox){
+    if (!el) return;
+    el.addEventListener("change", function(){
+      settings[key] = isCheckbox ? el.checked : el.value;
+      saveSettings(settings);
+      applySettings();
+    });
+  }
+
+  /* ---- Synthèse vocale ---- */
+  var speechSupported = ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
+  var frVoice = null;
+
+  function loadVoices(){
+    if (!speechSupported) return;
+    var voices = window.speechSynthesis.getVoices();
+    for (var i = 0; i < voices.length; i++){
+      if (/^fr/i.test(voices[i].lang)){ frVoice = voices[i]; break; }
+    }
+  }
+
+  function speak(text){
+    if (!speechSupported || !settings || !settings.audio || !text) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "fr-FR";
+      u.rate = 0.85;
+      if (frVoice) u.voice = frVoice;
+      window.speechSynthesis.speak(u);
+    } catch (err){ /* ignore */ }
+  }
+
+  function cancelSpeech(){
+    if (speechSupported){ try { window.speechSynthesis.cancel(); } catch (err){} }
+  }
+
+  function isFrancaisMode(){
+    return state.mode === "francais" || state.mode === "francais-review" || state.mode === "entrainement";
+  }
 
   function randInt(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -570,7 +805,15 @@
 
   function timerForRound(mode, round){
     var cfg = TIMER_CONFIG[mode];
-    return Math.max(cfg.floor, cfg.base - cfg.decrement * (round - 1));
+    var duration = Math.max(cfg.floor, cfg.base - cfg.decrement * (round - 1));
+    if (settings && settings.timerMode === "slow") duration = Math.round(duration * 1.6);
+    return duration;
+  }
+
+  function usesTimer(){
+    if (state.mode === "entrainement" || state.mode === "francais-review") return false;
+    if (settings && settings.timerMode === "off") return false;
+    return true;
   }
 
   function updateHud(){
@@ -593,6 +836,12 @@
       btn.addEventListener("click", function(){ onChoiceSelected(idx); });
       answersGrid.appendChild(btn);
     });
+
+    var showSpeak = speechSupported && settings && settings.audio && isFrancaisMode();
+    speakBtn.hidden = !showSpeak;
+    if (showSpeak && settings.autoSpeak){
+      speak(q.choices[q.correctIndex]);
+    }
   }
 
   function updateTimerUI(remaining, duration){
@@ -624,10 +873,30 @@
 
   function beginRound(){
     state.answered = false;
-    var q = state.mode === "maths" ? buildMathsQuestion(state.round) : buildFrancaisQuestion();
+    var q = state.mode === "maths" ? buildMathsQuestion(state.round)
+          : state.mode === "entrainement" ? buildCalmQuestion()
+          : buildFrancaisQuestion();
     state.currentQuestion = q;
     renderQuestion(q);
-    startTimer(timerForRound(state.mode, state.round));
+    var timed = usesTimer();
+    stage.classList.toggle("no-timer", !timed);
+    if (timed) startTimer(timerForRound(state.mode, state.round));
+  }
+
+  function buildCalmQuestion(){
+    var entry;
+    if (state.calmRetry.length && (state.calmSeen % 3 === 2)){
+      entry = state.calmRetry.shift();
+    } else {
+      entry = getNextWordEntry();
+    }
+    var choices = shuffle([entry.correct].concat(entry.wrong));
+    return {
+      prompt: "Quelle est la bonne orthographe ?",
+      choices: choices,
+      correctIndex: choices.indexOf(entry.correct),
+      entry: entry
+    };
   }
 
   function lockAnswers(){
@@ -638,6 +907,7 @@
 
   function onChoiceSelected(idx){
     if (state.mode === "francais-review") onReviewAnswer(idx);
+    else if (state.mode === "entrainement") onCalmAnswer(idx);
     else onAnswer(idx);
   }
 
@@ -667,6 +937,7 @@
       setTimeout(beginRound, 550);
     } else {
       recordMistakeIfFrancais(q);
+      if (isFrancaisMode()) speak(q.choices[q.correctIndex]);
       setTimeout(function(){ endGame(); }, state.mode === "francais" ? 5000 : 700);
     }
   }
@@ -678,7 +949,55 @@
     var buttons = lockAnswers();
     buttons[q.correctIndex].classList.add("good");
     recordMistakeIfFrancais(q);
+    if (isFrancaisMode()) speak(q.choices[q.correctIndex]);
     setTimeout(function(){ endGame(); }, state.mode === "francais" ? 5000 : 700);
+  }
+
+  function onCalmAnswer(idx){
+    if (state.answered) return;
+    state.answered = true;
+    stopTimer();
+    var q = state.currentQuestion;
+    var buttons = lockAnswers();
+    var correct = idx === q.correctIndex;
+    buttons[q.correctIndex].classList.add("good");
+    if (!correct) buttons[idx].classList.add("bad");
+
+    state.calmSeen++;
+    if (correct){
+      state.calmCorrect++;
+    } else {
+      speak(q.choices[q.correctIndex]);
+      addMistake({
+        correct: q.choices[q.correctIndex],
+        wrong: q.choices.filter(function(_, i){ return i !== q.correctIndex; })
+      });
+      refreshReviewCard();
+      if (q.entry) state.calmRetry.push(q.entry);
+    }
+    updateCalmHud();
+    setTimeout(beginRound, correct ? 700 : 5000);
+  }
+
+  function updateCalmHud(){
+    scoreVal.textContent = String(state.calmCorrect);
+    roundVal.textContent = String(state.calmSeen);
+  }
+
+  function finishCalm(){
+    stopTimer();
+    cancelSpeech();
+    stage.classList.remove("mode-calm", "no-timer");
+    showView("over");
+    overEyebrow.textContent = "Entraînement terminé";
+    retryBtn.style.display = "";
+    finalScore.textContent = String(state.calmCorrect);
+    finalScore.style.color = "var(--francais)";
+    overBest.innerHTML = state.calmSeen > 0
+      ? "Bravo ! <b>" + state.calmCorrect + "</b> mot" + (state.calmCorrect === 1 ? "" : "s")
+        + " réussi" + (state.calmCorrect === 1 ? "" : "s") + " sur <b>" + state.calmSeen + "</b>."
+      : "Aucun mot travaillé pour l'instant.";
+    refreshReviewCard();
   }
 
   function endGame(){
@@ -696,20 +1015,31 @@
   }
 
   function resetGameChrome(){
-    stage.classList.remove("mode-review");
+    stage.classList.remove("mode-review", "mode-calm", "no-timer");
     scoreLabel.textContent = "Score";
     roundLabel.textContent = "Manche";
   }
 
   function startMode(mode){
     stopTimer();
+    cancelSpeech();
     resetGameChrome();
     state.mode = mode;
     state.round = 1;
     state.score = 0;
+    state.calmSeen = 0;
+    state.calmCorrect = 0;
+    state.calmRetry = [];
     stage.classList.remove("active-maths", "active-francais");
     stage.classList.add(mode === "maths" ? "active-maths" : "active-francais");
-    updateHud();
+    if (mode === "entrainement"){
+      stage.classList.add("mode-calm");
+      scoreLabel.textContent = "Réussis";
+      roundLabel.textContent = "Mots";
+      updateCalmHud();
+    } else {
+      updateHud();
+    }
     showView("game");
     beginRound();
   }
@@ -788,23 +1118,59 @@
   });
 
   reviewCard.addEventListener("click", startReview);
+  practiceCard.addEventListener("click", function(){ startMode("entrainement"); });
 
-  document.getElementById("quitBtn").addEventListener("click", function(){
-    stopTimer();
-    stage.classList.remove("active-maths", "active-francais", "mode-review");
+  function goHome(){
+    cancelSpeech();
+    stage.classList.remove("active-maths", "active-francais", "mode-review", "mode-calm", "no-timer");
     refreshReviewCard();
     showView("home");
+  }
+
+  quitBtn.addEventListener("click", function(){
+    stopTimer();
+    if (state.mode === "entrainement" && state.calmSeen > 0){ finishCalm(); return; }
+    goHome();
   });
 
   retryBtn.addEventListener("click", function(){
     if (state.mode === "francais-review") startReview();
     else startMode(state.mode);
   });
-  document.getElementById("homeBtn").addEventListener("click", function(){
-    stage.classList.remove("active-maths", "active-francais", "mode-review");
-    refreshReviewCard();
-    showView("home");
+  document.getElementById("homeBtn").addEventListener("click", goHome);
+
+  /* ---- Réglages : câblage ---- */
+  function openSettings(){ settingsOverlay.classList.add("open"); }
+  function closeSettings(){ settingsOverlay.classList.remove("open"); }
+  settingsBtn.addEventListener("click", openSettings);
+  settingsClose.addEventListener("click", closeSettings);
+  settingsOverlay.addEventListener("click", function(e){ if (e.target === settingsOverlay) closeSettings(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeSettings(); });
+
+  speakBtn.addEventListener("click", function(){
+    var q = state.currentQuestion;
+    if (q) speak(q.choices[q.correctIndex]);
   });
+
+  bindSetting(setAudio, "audio", true);
+  bindSetting(setAutoSpeak, "autoSpeak", true);
+  bindSetting(setComfort, "comfortSpacing", true);
+  bindSetting(setFont, "dyslexiaFont", true);
+  bindSetting(setBig, "biggerText", true);
+  bindSetting(setCalm, "calmVisuals", true);
+  bindSetting(setTimer, "timerMode", false);
+
+  /* ---- Initialisation ---- */
+  if (speechSupported){
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  } else {
+    if (rowAudio) rowAudio.hidden = true;
+    if (rowAutoSpeak) rowAutoSpeak.hidden = true;
+  }
+
+  settings = loadSettings();
+  applySettings();
 
   refreshBestScoresHeader();
   refreshReviewCard();
