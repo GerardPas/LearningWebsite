@@ -314,6 +314,21 @@
 
 .stage.calm .mode-card-icon{display:none;}
 .stage.calm *{animation:none !important;transition:none !important;}
+
+/* HOMOPHONES : trou dans la phrase + rappel de règle */
+.gap{
+  display:inline-block;min-width:1.6em;text-align:center;
+  color:var(--francais);font-weight:800;
+  border-bottom:2px dashed var(--francais);padding:0 .3em;margin:0 .1em;
+}
+.feedback-text{
+  margin:20px auto 0;max-width:520px;
+  background:var(--ink-2);border:1px solid var(--ink-3);border-left:3px solid var(--francais);
+  border-radius:12px;padding:13px 16px;
+  color:var(--text);font-size:14px;line-height:1.5;text-align:left;
+}
+.feedback-text[hidden]{display:none;}
+.stage.text-lg .feedback-text{font-size:16px;}
 </style>
 
 <div class="stage" id="stage" data-view="home">
@@ -364,6 +379,14 @@
       <span class="review-count" aria-hidden="true">▶</span>
     </button>
 
+    <button class="review-strip practice-strip" id="homophonesCard" type="button">
+      <span class="review-info">
+        <span class="review-title">Français · Homophones</span>
+        <span class="review-sub">a/à, et/est, son/sont… choisis le bon mot dans la phrase</span>
+      </span>
+      <span class="review-count" aria-hidden="true">▶</span>
+    </button>
+
     <button class="review-strip" id="reviewCard" type="button" disabled>
       <span class="review-info">
         <span class="review-title">Français · Révision des erreurs</span>
@@ -383,9 +406,10 @@
     <div class="timer-digit" id="timerDigit">0.0</div>
     <div class="question-zone">
       <p class="question-text" id="questionText"></p>
-      <button class="speak-btn" id="speakBtn" type="button" hidden>🔊 Écouter le mot</button>
+      <button class="speak-btn" id="speakBtn" type="button" hidden>🔊 Écouter</button>
     </div>
     <div class="answers-grid" id="answersGrid"></div>
+    <p class="feedback-text" id="feedbackText" hidden></p>
   </section>
 
   <section class="view view-over" data-view-name="over">
@@ -443,6 +467,7 @@
 </div>
 
 <script src="words.js" charset="utf-8"></script>
+<script src="homophones.js" charset="utf-8"></script>
 <script>
 (function(){
   "use strict";
@@ -465,6 +490,8 @@
   var reviewCard = document.getElementById("reviewCard");
   var speakBtn = document.getElementById("speakBtn");
   var practiceCard = document.getElementById("practiceCard");
+  var homophonesCard = document.getElementById("homophonesCard");
+  var feedbackText = document.getElementById("feedbackText");
   var quitBtn = document.getElementById("quitBtn");
   var settingsBtn = document.getElementById("settingsBtn");
   var settingsOverlay = document.getElementById("settingsOverlay");
@@ -491,7 +518,7 @@
     mode: null, round: 1, score: 0,
     currentQuestion: null,
     rafId: null, answered: false,
-    calmSeen: 0, calmCorrect: 0, calmRetry: []
+    calmSeen: 0, calmCorrect: 0, calmRetry: [], homoRetry: []
   };
 
   function showView(name){ stage.dataset.view = name; }
@@ -578,7 +605,8 @@
   }
 
   function isFrancaisMode(){
-    return state.mode === "francais" || state.mode === "francais-review" || state.mode === "entrainement";
+    return state.mode === "francais" || state.mode === "francais-review"
+        || state.mode === "entrainement" || state.mode === "homophones";
   }
 
   function randInt(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -803,6 +831,69 @@
     return { prompt: "Quelle est la bonne orthographe ?", choices: choices, correctIndex: choices.indexOf(entry.correct) };
   }
 
+  /* ---- Homophones (dysorthographie) ---- */
+  var SAFETY_HOMOPHONE_BANK = [
+    { sentence: "Elle ___ mangé une pomme.", correct: "a", wrong: ["à"], rule: "« a » = le verbe avoir ; « à » = préposition." },
+    { sentence: "Le ciel ___ bleu.", correct: "est", wrong: ["et"], rule: "« et » relie deux mots ; « est » = le verbe être." },
+    { sentence: "Les enfants ___ dans le jardin.", correct: "sont", wrong: ["son"], rule: "« son » = déterminant ; « sont » = le verbe être." }
+  ];
+
+  var ACTIVE_HOMOPHONE_BANK = (typeof HOMOPHONE_BANK !== "undefined" && Array.isArray(HOMOPHONE_BANK) && HOMOPHONE_BANK.length > 0)
+    ? HOMOPHONE_BANK
+    : (console.warn("Chrono Défi — homophones.js introuvable ou vide, utilisation d'une liste de secours réduite."), SAFETY_HOMOPHONE_BANK);
+
+  var HOMOPHONE_PROGRESS_KEY = "chronodefi-homophones-progress";
+  var memoryHomoProgress = null;
+
+  function loadHomoProgress(){
+    try {
+      var raw = localStorage.getItem(HOMOPHONE_PROGRESS_KEY);
+      return raw ? JSON.parse(raw) : memoryHomoProgress;
+    } catch (err){ return memoryHomoProgress; }
+  }
+
+  function saveHomoProgress(progress){
+    memoryHomoProgress = progress;
+    try { localStorage.setItem(HOMOPHONE_PROGRESS_KEY, JSON.stringify(progress)); }
+    catch (err){ /* memoryHomoProgress garde l'état de la session */ }
+  }
+
+  function getNextHomoEntry(){
+    var progress = loadHomoProgress();
+    if (!progress || !Array.isArray(progress.order) || progress.order.length !== ACTIVE_HOMOPHONE_BANK.length){
+      progress = { order: shuffle(ACTIVE_HOMOPHONE_BANK.map(function(_, i){ return i; })), cursor: 0 };
+    }
+    if (progress.cursor >= progress.order.length){
+      progress = { order: shuffle(ACTIVE_HOMOPHONE_BANK.map(function(_, i){ return i; })), cursor: 0 };
+    }
+    var idx = progress.order[progress.cursor];
+    progress.cursor += 1;
+    saveHomoProgress(progress);
+    return ACTIVE_HOMOPHONE_BANK[idx];
+  }
+
+  function buildHomophoneQuestion(){
+    var entry;
+    if (state.homoRetry.length && (state.calmSeen % 3 === 2)){
+      entry = state.homoRetry.shift();
+    } else {
+      entry = getNextHomoEntry();
+    }
+    var choices = shuffle([entry.correct].concat(entry.wrong));
+    var correctIndex = choices.indexOf(entry.correct);
+    var promptHTML = entry.sentence.replace("___", '<span class="gap">?</span>');
+    var spokenText = entry.sentence.replace("___", entry.correct);
+    return {
+      prompt: entry.sentence,
+      promptHTML: promptHTML,
+      spokenText: spokenText,
+      rule: entry.rule,
+      choices: choices,
+      correctIndex: correctIndex,
+      entry: entry
+    };
+  }
+
   function timerForRound(mode, round){
     var cfg = TIMER_CONFIG[mode];
     var duration = Math.max(cfg.floor, cfg.base - cfg.decrement * (round - 1));
@@ -811,9 +902,13 @@
   }
 
   function usesTimer(){
-    if (state.mode === "entrainement" || state.mode === "francais-review") return false;
+    if (state.mode === "entrainement" || state.mode === "francais-review" || state.mode === "homophones") return false;
     if (settings && settings.timerMode === "off") return false;
     return true;
+  }
+
+  function isSessionMode(){
+    return state.mode === "entrainement" || state.mode === "homophones";
   }
 
   function updateHud(){
@@ -822,10 +917,13 @@
   }
 
   function renderQuestion(q){
-    questionText.textContent = q.prompt;
+    if (q.promptHTML){ questionText.innerHTML = q.promptHTML; }
+    else { questionText.textContent = q.prompt; }
     questionText.classList.remove("enter");
     void questionText.offsetWidth;
     questionText.classList.add("enter");
+
+    hideFeedback();
 
     answersGrid.innerHTML = "";
     q.choices.forEach(function(choice, idx){
@@ -840,8 +938,19 @@
     var showSpeak = speechSupported && settings && settings.audio && isFrancaisMode();
     speakBtn.hidden = !showSpeak;
     if (showSpeak && settings.autoSpeak){
-      speak(q.choices[q.correctIndex]);
+      speak(q.spokenText || q.choices[q.correctIndex]);
     }
+  }
+
+  function showFeedback(text){
+    if (!text){ hideFeedback(); return; }
+    feedbackText.textContent = text;
+    feedbackText.hidden = false;
+  }
+
+  function hideFeedback(){
+    feedbackText.hidden = true;
+    feedbackText.textContent = "";
   }
 
   function updateTimerUI(remaining, duration){
@@ -875,6 +984,7 @@
     state.answered = false;
     var q = state.mode === "maths" ? buildMathsQuestion(state.round)
           : state.mode === "entrainement" ? buildCalmQuestion()
+          : state.mode === "homophones" ? buildHomophoneQuestion()
           : buildFrancaisQuestion();
     state.currentQuestion = q;
     renderQuestion(q);
@@ -908,6 +1018,7 @@
   function onChoiceSelected(idx){
     if (state.mode === "francais-review") onReviewAnswer(idx);
     else if (state.mode === "entrainement") onCalmAnswer(idx);
+    else if (state.mode === "homophones") onHomophoneAnswer(idx);
     else onAnswer(idx);
   }
 
@@ -979,24 +1090,49 @@
     setTimeout(beginRound, correct ? 700 : 5000);
   }
 
+  function onHomophoneAnswer(idx){
+    if (state.answered) return;
+    state.answered = true;
+    var q = state.currentQuestion;
+    var buttons = lockAnswers();
+    var correct = idx === q.correctIndex;
+    buttons[q.correctIndex].classList.add("good");
+    if (!correct) buttons[idx].classList.add("bad");
+
+    state.calmSeen++;
+    if (correct){
+      state.calmCorrect++;
+    } else {
+      if (q.entry) state.homoRetry.push(q.entry);
+    }
+    showFeedback(q.rule);
+    speak(q.spokenText);
+    updateCalmHud();
+    setTimeout(beginRound, correct ? 1800 : 5000);
+  }
+
   function updateCalmHud(){
     scoreVal.textContent = String(state.calmCorrect);
     roundVal.textContent = String(state.calmSeen);
   }
 
   function finishCalm(){
+    var isHomo = state.mode === "homophones";
+    var noun = isHomo ? "phrase" : "mot";
     stopTimer();
     cancelSpeech();
     stage.classList.remove("mode-calm", "no-timer");
     showView("over");
-    overEyebrow.textContent = "Entraînement terminé";
+    overEyebrow.textContent = isHomo ? "Homophones terminés" : "Entraînement terminé";
     retryBtn.style.display = "";
     finalScore.textContent = String(state.calmCorrect);
     finalScore.style.color = "var(--francais)";
+    var plural = state.calmCorrect === 1 ? "" : "s";
+    var adj = (isHomo ? "réussie" : "réussi") + plural;
     overBest.innerHTML = state.calmSeen > 0
-      ? "Bravo ! <b>" + state.calmCorrect + "</b> mot" + (state.calmCorrect === 1 ? "" : "s")
-        + " réussi" + (state.calmCorrect === 1 ? "" : "s") + " sur <b>" + state.calmSeen + "</b>."
-      : "Aucun mot travaillé pour l'instant.";
+      ? "Bravo ! <b>" + state.calmCorrect + "</b> " + noun + plural
+        + " " + adj + " sur <b>" + state.calmSeen + "</b>."
+      : (isHomo ? "Aucune phrase travaillée pour l'instant." : "Aucun mot travaillé pour l'instant.");
     refreshReviewCard();
   }
 
@@ -1030,12 +1166,13 @@
     state.calmSeen = 0;
     state.calmCorrect = 0;
     state.calmRetry = [];
+    state.homoRetry = [];
     stage.classList.remove("active-maths", "active-francais");
     stage.classList.add(mode === "maths" ? "active-maths" : "active-francais");
-    if (mode === "entrainement"){
+    if (mode === "entrainement" || mode === "homophones"){
       stage.classList.add("mode-calm");
       scoreLabel.textContent = "Réussis";
-      roundLabel.textContent = "Mots";
+      roundLabel.textContent = mode === "homophones" ? "Phrases" : "Mots";
       updateCalmHud();
     } else {
       updateHud();
@@ -1119,6 +1256,7 @@
 
   reviewCard.addEventListener("click", startReview);
   practiceCard.addEventListener("click", function(){ startMode("entrainement"); });
+  homophonesCard.addEventListener("click", function(){ startMode("homophones"); });
 
   function goHome(){
     cancelSpeech();
@@ -1129,7 +1267,7 @@
 
   quitBtn.addEventListener("click", function(){
     stopTimer();
-    if (state.mode === "entrainement" && state.calmSeen > 0){ finishCalm(); return; }
+    if (isSessionMode() && state.calmSeen > 0){ finishCalm(); return; }
     goHome();
   });
 
@@ -1149,7 +1287,7 @@
 
   speakBtn.addEventListener("click", function(){
     var q = state.currentQuestion;
-    if (q) speak(q.choices[q.correctIndex]);
+    if (q) speak(q.spokenText || q.choices[q.correctIndex]);
   });
 
   bindSetting(setAudio, "audio", true);
