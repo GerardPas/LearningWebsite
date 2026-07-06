@@ -1,0 +1,812 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chrono Défi</title>
+<style>
+:root{
+  --ink:#12141f;
+  --ink-2:#1b1e2c;
+  --ink-3:#242840;
+  --text:#ecedf5;
+  --text-dim:#8b8fa8;
+  --maths:#38bdf8;
+  --maths-soft:rgba(56,189,248,.16);
+  --francais:#fdba4a;
+  --francais-soft:rgba(253,186,74,.16);
+  --good:#4ade80;
+  --bad:#f87171;
+  --accent:#8b8fd9;
+  --accent-soft:rgba(139,143,217,.14);
+  --radius:18px;
+  --font-display:-apple-system,"Segoe UI",system-ui,sans-serif;
+  --font-body:-apple-system,"Segoe UI",system-ui,sans-serif;
+  --font-digit:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box;}
+
+.stage{
+  min-height:100vh;
+  background:
+    radial-gradient(760px 480px at 50% -10%, var(--accent-soft), transparent 70%),
+    var(--ink);
+  color:var(--text);
+  font-family:var(--font-body);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:28px 20px 60px;
+  transition:background .5s ease;
+}
+.stage.active-maths{--accent:var(--maths);--accent-soft:var(--maths-soft);}
+.stage.active-francais{--accent:var(--francais);--accent-soft:var(--francais-soft);}
+
+.topbar{
+  width:100%;
+  max-width:640px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:36px;
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:20px;height:20px;border-radius:50%;
+  border:2.5px solid var(--text-dim);
+  position:relative;flex-shrink:0;
+}
+.brand-mark::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:1.5px;height:7px;background:var(--text-dim);
+  transform:translate(-50%,-100%);transform-origin:bottom center;
+}
+.brand-name{
+  font-family:var(--font-display);font-weight:800;
+  font-size:15px;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--text-dim);
+}
+.best-scores{
+  font-family:var(--font-digit);font-variant-numeric:tabular-nums;
+  font-size:12.5px;color:var(--text-dim);text-align:right;line-height:1.5;
+}
+.best-scores b{color:var(--text);font-weight:600;}
+
+.view{display:none;width:100%;max-width:640px;}
+.stage[data-view="home"] .view-home,
+.stage[data-view="game"] .view-game,
+.stage[data-view="over"] .view-over{display:flex;flex-direction:column;}
+
+/* HOME */
+.view-home{align-items:center;text-align:center;}
+.home-title{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(28px,6vw,40px);letter-spacing:-.01em;
+  text-wrap:balance;margin:0 0 10px;
+}
+.home-sub{
+  color:var(--text-dim);font-size:15.5px;line-height:1.5;
+  max-width:38ch;margin:0 0 34px;
+}
+.mode-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;
+}
+@media (max-width:560px){.mode-grid{grid-template-columns:1fr;}}
+
+.mode-card{
+  position:relative;overflow:hidden;
+  border:1px solid var(--ink-3);
+  background:var(--ink-2);
+  border-radius:var(--radius);
+  padding:30px 20px 26px;
+  min-height:190px;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;
+  gap:4px;
+  cursor:pointer;
+  font-family:var(--font-body);
+  text-align:left;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.mode-card:hover{transform:translateY(-3px);}
+.mode-card:focus-visible{outline:2px solid var(--card-accent);outline-offset:3px;}
+.mode-maths{--card-accent:var(--maths);}
+.mode-francais{--card-accent:var(--francais);}
+.mode-maths:hover{border-color:var(--maths);box-shadow:0 12px 32px -12px var(--maths-soft);}
+.mode-francais:hover{border-color:var(--francais);box-shadow:0 12px 32px -12px var(--francais-soft);}
+
+.mode-card-icon{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
+}
+.mode-card-icon span{
+  position:absolute;font-family:var(--font-digit);font-weight:600;
+  color:var(--card-accent);opacity:.22;
+}
+.mode-card-label{
+  position:relative;font-family:var(--font-display);font-weight:800;
+  font-size:22px;color:var(--text);
+}
+.mode-card-desc{position:relative;font-size:13.5px;color:var(--text-dim);}
+
+.review-strip{
+  margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:14px;padding:16px 20px;border-radius:14px;border:1px solid var(--ink-3);
+  background:var(--ink-2);cursor:pointer;text-align:left;font-family:var(--font-body);color:var(--text);
+  transition:border-color .18s ease,transform .18s ease;
+}
+.review-strip:hover:not(:disabled){border-color:var(--francais);transform:translateY(-2px);}
+.review-strip:focus-visible{outline:2px solid var(--francais);outline-offset:3px;}
+.review-strip:disabled{cursor:default;opacity:.55;}
+.review-info{display:flex;flex-direction:column;gap:3px;}
+.review-title{font-weight:700;font-size:14.5px;}
+.review-sub{font-size:12.5px;color:var(--text-dim);}
+.review-count{
+  font-family:var(--font-digit);font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;
+  min-width:34px;text-align:center;padding:6px 10px;border-radius:999px;
+  background:var(--ink-3);color:var(--text-dim);flex-shrink:0;
+}
+.review-strip.has-mistakes .review-count{background:var(--francais-soft);color:var(--francais);}
+
+/* GAME */
+.view-game{align-items:stretch;}
+.game-hud{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;
+}
+.stage.mode-review .timer-track,
+.stage.mode-review .timer-digit{display:none;}
+.quit-btn{
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--ink-3);background:var(--ink-2);color:var(--text-dim);
+  font-size:17px;line-height:1;cursor:pointer;
+}
+.quit-btn:hover{color:var(--text);border-color:var(--accent);}
+.quit-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.hud-score,.hud-round{
+  font-family:var(--font-digit);font-variant-numeric:tabular-nums;
+  font-size:14px;color:var(--text-dim);
+}
+.hud-score b,.hud-round b{color:var(--text);font-weight:700;}
+
+.timer-track{
+  height:8px;border-radius:6px;background:var(--ink-3);overflow:hidden;margin-bottom:10px;
+}
+.timer-fill{
+  height:100%;width:100%;border-radius:6px;background:var(--accent);
+  transition:background-color .2s ease;
+}
+.timer-track.critical .timer-fill{background:var(--bad);}
+
+.timer-digit{
+  align-self:center;font-family:var(--font-digit);font-variant-numeric:tabular-nums;
+  font-size:15px;color:var(--text-dim);margin-bottom:28px;letter-spacing:.02em;
+}
+.timer-digit.critical{color:var(--bad);}
+
+.question-zone{
+  min-height:96px;display:flex;align-items:center;justify-content:center;
+  text-align:center;margin-bottom:30px;padding:0 6px;
+}
+.question-text{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(22px,5.5vw,32px);letter-spacing:-.01em;
+  text-wrap:balance;margin:0;
+}
+@media (prefers-reduced-motion:no-preference){
+  .question-text.enter{animation:qenter .28s ease both;}
+}
+@keyframes qenter{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.answers-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+.answer-btn{
+  border:1px solid var(--ink-3);background:var(--ink-2);color:var(--text);
+  border-radius:14px;padding:20px 14px;
+  font-family:var(--font-digit);font-variant-numeric:tabular-nums;
+  font-size:18px;font-weight:600;cursor:pointer;
+  transition:transform .12s ease,border-color .12s ease,background-color .12s ease;
+}
+.answer-btn:hover:not(:disabled){border-color:var(--accent);}
+.answer-btn:active:not(:disabled){transform:scale(.97);}
+.answer-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.answer-btn:disabled{cursor:default;}
+.answer-btn.good{background:rgba(74,222,128,.14);border-color:var(--good);color:var(--good);}
+.answer-btn.bad{background:rgba(248,113,113,.14);border-color:var(--bad);color:var(--bad);}
+
+/* OVER */
+.view-over{align-items:center;text-align:center;padding-top:20px;}
+.over-eyebrow{
+  font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-dim);margin:0 0 14px;
+}
+.over-score{
+  font-family:var(--font-digit);font-variant-numeric:tabular-nums;
+  font-weight:700;font-size:clamp(56px,14vw,88px);margin:0;color:var(--accent);
+  line-height:1;
+}
+.over-best{color:var(--text-dim);font-size:14.5px;margin:14px 0 34px;}
+.over-best b{color:var(--text);}
+.over-actions{display:flex;gap:12px;}
+.btn-primary,.btn-secondary{
+  font-family:var(--font-body);font-weight:600;font-size:15px;
+  border-radius:12px;padding:13px 26px;cursor:pointer;border:1px solid transparent;
+}
+.btn-primary{background:var(--accent);color:var(--ink);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-secondary{background:transparent;border-color:var(--ink-3);color:var(--text-dim);}
+.btn-secondary:hover{color:var(--text);border-color:var(--accent);}
+.btn-primary:focus-visible,.btn-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+
+<div class="stage" id="stage" data-view="home">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Chrono Défi</span>
+    </div>
+    <div class="best-scores" id="bestScores">Meilleur score — Maths <b>0</b> · Français <b>0</b></div>
+  </div>
+
+  <section class="view view-home" data-view-name="home">
+    <h1 class="home-title">Choisis ton défi</h1>
+    <p class="home-sub">Réponds juste, le temps se resserre à chaque bonne réponse. Une erreur ou le chrono à zéro, et la partie s'arrête.</p>
+    <div class="mode-grid">
+      <button class="mode-card mode-maths" data-mode="maths" type="button">
+        <span class="mode-card-icon" aria-hidden="true">
+          <span style="left:10%;top:14%;font-size:34px;transform:rotate(-8deg);">×</span>
+          <span style="left:62%;top:8%;font-size:26px;transform:rotate(10deg);">÷</span>
+          <span style="left:78%;top:52%;font-size:40px;transform:rotate(6deg);">+</span>
+          <span style="left:20%;top:60%;font-size:24px;transform:rotate(-4deg);">−</span>
+          <span style="left:48%;top:38%;font-size:20px;transform:rotate(14deg);">7</span>
+        </span>
+        <span class="mode-card-label">Maths</span>
+        <span class="mode-card-desc">Calcul mental, 3 opérations</span>
+      </button>
+      <button class="mode-card mode-francais" data-mode="francais" type="button">
+        <span class="mode-card-icon" aria-hidden="true">
+          <span style="left:8%;top:16%;font-size:30px;transform:rotate(-6deg);">é</span>
+          <span style="left:58%;top:10%;font-size:24px;transform:rotate(8deg);">ss</span>
+          <span style="left:72%;top:54%;font-size:34px;transform:rotate(4deg);">qu</span>
+          <span style="left:18%;top:58%;font-size:22px;transform:rotate(-10deg);">ph</span>
+          <span style="left:44%;top:34%;font-size:20px;transform:rotate(12deg);">œ</span>
+        </span>
+        <span class="mode-card-label">Français</span>
+        <span class="mode-card-desc">Trouve la bonne orthographe</span>
+      </button>
+    </div>
+
+    <button class="review-strip" id="reviewCard" type="button" disabled>
+      <span class="review-info">
+        <span class="review-title">Français · Révision des erreurs</span>
+        <span class="review-sub" id="reviewSub">Aucune erreur à réviser pour l'instant</span>
+      </span>
+      <span class="review-count" id="reviewCount">0</span>
+    </button>
+  </section>
+
+  <section class="view view-game" data-view-name="game">
+    <div class="game-hud">
+      <button class="quit-btn" id="quitBtn" type="button" aria-label="Quitter la partie">×</button>
+      <div class="hud-score"><span id="scoreLabel">Score</span> <b id="scoreVal">0</b></div>
+      <div class="hud-round"><span id="roundLabel">Manche</span> <b id="roundVal">1</b></div>
+    </div>
+    <div class="timer-track" id="timerTrack"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="timer-digit" id="timerDigit">0.0</div>
+    <div class="question-zone">
+      <p class="question-text" id="questionText"></p>
+    </div>
+    <div class="answers-grid" id="answersGrid"></div>
+  </section>
+
+  <section class="view view-over" data-view-name="over">
+    <p class="over-eyebrow" id="overEyebrow">Partie terminée</p>
+    <h2 class="over-score" id="finalScore">0</h2>
+    <p class="over-best" id="overBest"></p>
+    <div class="over-actions">
+      <button class="btn-primary" id="retryBtn" type="button">Rejouer</button>
+      <button class="btn-secondary" id="homeBtn" type="button">Accueil</button>
+    </div>
+  </section>
+</div>
+
+<script src="words.js" charset="utf-8"></script>
+<script>
+(function(){
+  "use strict";
+
+  var stage = document.getElementById("stage");
+  var bestScoresEl = document.getElementById("bestScores");
+  var scoreVal = document.getElementById("scoreVal");
+  var roundVal = document.getElementById("roundVal");
+  var timerTrack = document.getElementById("timerTrack");
+  var timerFill = document.getElementById("timerFill");
+  var timerDigit = document.getElementById("timerDigit");
+  var questionText = document.getElementById("questionText");
+  var answersGrid = document.getElementById("answersGrid");
+  var finalScore = document.getElementById("finalScore");
+  var overBest = document.getElementById("overBest");
+  var overEyebrow = document.getElementById("overEyebrow");
+  var retryBtn = document.getElementById("retryBtn");
+  var scoreLabel = document.getElementById("scoreLabel");
+  var roundLabel = document.getElementById("roundLabel");
+  var reviewCard = document.getElementById("reviewCard");
+
+  var TIMER_CONFIG = {
+    maths: { base: 18000, decrement: 700, floor: 6000 },
+    francais: { base: 28000, decrement: 700, floor: 13000 }
+  };
+
+  var OPS_STREAK_THRESHOLD = 5;
+  function opsCountForRound(round){ return round <= OPS_STREAK_THRESHOLD ? 2 : 3; }
+
+  var state = {
+    mode: null, round: 1, score: 0,
+    currentQuestion: null,
+    rafId: null, answered: false
+  };
+
+  function showView(name){ stage.dataset.view = name; }
+
+  function randInt(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = randInt(0, i);
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  function bestScoreKey(mode){ return "chronodefi-best-" + mode; }
+  var memoryScores = { maths: 0, francais: 0 };
+
+  function getBestScore(mode){
+    try {
+      var raw = localStorage.getItem(bestScoreKey(mode));
+      return raw ? parseInt(raw, 10) || 0 : 0;
+    } catch (err){
+      return memoryScores[mode] || 0;
+    }
+  }
+
+  function updateBestScore(mode, score){
+    var current = getBestScore(mode);
+    if (score > current){
+      current = score;
+      try { localStorage.setItem(bestScoreKey(mode), String(score)); }
+      catch (err){ memoryScores[mode] = score; }
+    }
+    return current;
+  }
+
+  function refreshBestScoresHeader(){
+    bestScoresEl.innerHTML = "Meilleur score — Maths <b>" + getBestScore("maths") +
+      "</b> · Français <b>" + getBestScore("francais") + "</b>";
+  }
+
+  var MISTAKES_KEY = "chronodefi-mistakes-francais";
+  var memoryMistakes = [];
+
+  function loadMistakes(){
+    try {
+      var raw = localStorage.getItem(MISTAKES_KEY);
+      return raw ? JSON.parse(raw) : memoryMistakes;
+    } catch (err){
+      return memoryMistakes;
+    }
+  }
+
+  function saveMistakes(list){
+    memoryMistakes = list;
+    try { localStorage.setItem(MISTAKES_KEY, JSON.stringify(list)); }
+    catch (err){ /* memoryMistakes already holds the current session state */ }
+  }
+
+  function addMistake(entry){
+    var list = loadMistakes();
+    var exists = list.some(function(m){ return m.correct === entry.correct; });
+    if (!exists){
+      list.push({ correct: entry.correct, wrong: entry.wrong });
+      saveMistakes(list);
+    }
+  }
+
+  function removeMistake(correctWord){
+    var list = loadMistakes();
+    var filtered = list.filter(function(m){ return m.correct !== correctWord; });
+    if (filtered.length !== list.length) saveMistakes(filtered);
+  }
+
+  function refreshReviewCard(){
+    var count = loadMistakes().length;
+    document.getElementById("reviewCount").textContent = String(count);
+    reviewCard.disabled = count === 0;
+    reviewCard.classList.toggle("has-mistakes", count > 0);
+    document.getElementById("reviewSub").textContent = count === 0
+      ? "Aucune erreur à réviser pour l'instant"
+      : count + " mot" + (count === 1 ? "" : "s") + " à corriger";
+  }
+
+  function evaluateExpressionTokens(numbers, ops){
+    var terms = [];
+    var currentValue = numbers[0];
+    var currentSign = "+";
+    for (var i = 0; i < ops.length; i++){
+      var op = ops[i];
+      var n = numbers[i + 1];
+      if (op === "×") currentValue *= n;
+      else if (op === "÷") currentValue = currentValue / n;
+      else {
+        terms.push({ sign: currentSign, value: currentValue });
+        currentSign = op;
+        currentValue = n;
+      }
+    }
+    terms.push({ sign: currentSign, value: currentValue });
+    var total = 0;
+    for (var t = 0; t < terms.length; t++){
+      total += (terms[t].sign === "-" ? -1 : 1) * terms[t].value;
+    }
+    return total;
+  }
+
+  function buildExpression(opsCount, maxN){
+    for (var attempt = 0; attempt < 25; attempt++){
+      var ops = [];
+      for (var i = 0; i < opsCount; i++) ops.push(["+", "-", "×", "÷"][randInt(0, 3)]);
+      var numbers = [randInt(2, maxN)];
+      var termValue = numbers[0];
+      var ok = true;
+      for (var k = 0; k < opsCount; k++){
+        var op = ops[k];
+        var n;
+        if (op === "×"){
+          n = randInt(2, Math.max(2, Math.floor(maxN / 3)));
+          termValue *= n;
+        } else if (op === "÷"){
+          var divisors = [];
+          for (var dd = 2; dd <= Math.min(12, termValue); dd++){ if (termValue % dd === 0) divisors.push(dd); }
+          if (divisors.length === 0){ ok = false; break; }
+          n = divisors[randInt(0, divisors.length - 1)];
+          termValue = termValue / n;
+        } else {
+          n = randInt(2, maxN);
+          termValue = n;
+        }
+        numbers.push(n);
+      }
+      if (!ok) continue;
+      var total = evaluateExpressionTokens(numbers, ops);
+      if (!Number.isInteger(total) || total < 0 || total > maxN * maxN) continue;
+      return { numbers: numbers, ops: ops, answer: total };
+    }
+    return { numbers: [maxN, 1], ops: ["+"], answer: maxN + 1 };
+  }
+
+  function buildMathsQuestion(round){
+    var tier = Math.min(4, Math.floor((round - 1) / 5) + 1);
+    var maxN = 4 + tier * 6;
+    var opsCount = opsCountForRound(round);
+    var built = buildExpression(opsCount, maxN);
+    var expr = String(built.numbers[0]);
+    for (var k = 0; k < built.ops.length; k++){
+      expr += " " + built.ops[k] + " " + built.numbers[k + 1];
+    }
+    var seen = {};
+    seen[built.answer] = true;
+    var distractors = [];
+    var offsets = shuffle([1, -1, 2, -2, 3, -3, 5, -5, 7, -7]);
+    for (var o = 0; o < offsets.length && distractors.length < 3; o++){
+      var val = built.answer + offsets[o];
+      if (val >= 0 && !seen[val]){ seen[val] = true; distractors.push(val); }
+    }
+    var guard = 0;
+    while (distractors.length < 3 && guard < 20){
+      guard++;
+      var filler = built.answer + (guard % 2 === 0 ? 1 : -1) * (guard + 1);
+      if (filler >= 0 && filler !== built.answer && !seen[filler]){
+        seen[filler] = true;
+        distractors.push(filler);
+      }
+    }
+    var choices = shuffle([built.answer].concat(distractors));
+    return { prompt: expr, choices: choices, correctIndex: choices.indexOf(built.answer) };
+  }
+
+  var SAFETY_WORD_BANK = [
+    { correct: "développement", wrong: ["développment", "dévelopement", "développemment"] },
+    { correct: "bibliothèque", wrong: ["bibliothéque", "bibliotheque", "bibliotèque"] },
+    { correct: "anniversaire", wrong: ["aniversaire", "annyversaire", "anniversère"] },
+    { correct: "professionnel", wrong: ["professionel", "proffessionnel", "professionele"] },
+    { correct: "immédiatement", wrong: ["imédiatement", "immédiattement", "imédiatemment"] },
+    { correct: "gouvernement", wrong: ["gouvernemant", "gouvernment", "gourvernement"] },
+    { correct: "intéressant", wrong: ["interessant", "intéréssant", "intérressant"] },
+    { correct: "vaccin", wrong: ["vacin", "vaxin", "vaccint"] }
+  ];
+
+  var ACTIVE_WORD_BANK = (typeof WORD_BANK !== "undefined" && Array.isArray(WORD_BANK) && WORD_BANK.length > 0)
+    ? WORD_BANK
+    : (console.warn("Chrono Défi — words.js introuvable ou vide, utilisation d'une liste de secours réduite."), SAFETY_WORD_BANK);
+
+  var WORD_PROGRESS_KEY = "chronodefi-francais-word-progress";
+  var memoryWordProgress = null;
+
+  function loadWordProgress(){
+    try {
+      var raw = localStorage.getItem(WORD_PROGRESS_KEY);
+      return raw ? JSON.parse(raw) : memoryWordProgress;
+    } catch (err){ return memoryWordProgress; }
+  }
+
+  function saveWordProgress(progress){
+    memoryWordProgress = progress;
+    try { localStorage.setItem(WORD_PROGRESS_KEY, JSON.stringify(progress)); }
+    catch (err){ /* memoryWordProgress already holds the current session state */ }
+  }
+
+  function freshWordOrder(){
+    return shuffle(ACTIVE_WORD_BANK.map(function(_, i){ return i; }));
+  }
+
+  function getNextWordEntry(){
+    var progress = loadWordProgress();
+    if (!progress || !Array.isArray(progress.order) || progress.order.length !== ACTIVE_WORD_BANK.length){
+      progress = { order: freshWordOrder(), cursor: 0 };
+    }
+    if (progress.cursor >= progress.order.length){
+      progress = { order: freshWordOrder(), cursor: 0 };
+    }
+    var wordIndex = progress.order[progress.cursor];
+    progress.cursor += 1;
+    saveWordProgress(progress);
+    return ACTIVE_WORD_BANK[wordIndex];
+  }
+
+  function buildFrancaisQuestion(){
+    var entry = getNextWordEntry();
+    var choices = shuffle([entry.correct].concat(entry.wrong));
+    return { prompt: "Quelle est la bonne orthographe ?", choices: choices, correctIndex: choices.indexOf(entry.correct) };
+  }
+
+  function timerForRound(mode, round){
+    var cfg = TIMER_CONFIG[mode];
+    return Math.max(cfg.floor, cfg.base - cfg.decrement * (round - 1));
+  }
+
+  function updateHud(){
+    scoreVal.textContent = String(state.score);
+    roundVal.textContent = String(state.round);
+  }
+
+  function renderQuestion(q){
+    questionText.textContent = q.prompt;
+    questionText.classList.remove("enter");
+    void questionText.offsetWidth;
+    questionText.classList.add("enter");
+
+    answersGrid.innerHTML = "";
+    q.choices.forEach(function(choice, idx){
+      var btn = document.createElement("button");
+      btn.className = "answer-btn";
+      btn.type = "button";
+      btn.textContent = String(choice);
+      btn.addEventListener("click", function(){ onChoiceSelected(idx); });
+      answersGrid.appendChild(btn);
+    });
+  }
+
+  function updateTimerUI(remaining, duration){
+    var pct = Math.max(0, remaining / duration * 100);
+    timerFill.style.width = pct + "%";
+    timerDigit.textContent = (remaining / 1000).toFixed(1);
+    var critical = remaining <= Math.min(3000, duration * 0.3);
+    timerTrack.classList.toggle("critical", critical);
+    timerDigit.classList.toggle("critical", critical);
+  }
+
+  function startTimer(duration){
+    if (state.rafId) cancelAnimationFrame(state.rafId);
+    var startTs = performance.now();
+    function tick(now){
+      var elapsed = now - startTs;
+      var remaining = Math.max(0, duration - elapsed);
+      updateTimerUI(remaining, duration);
+      if (remaining <= 0){ onTimeout(); return; }
+      state.rafId = requestAnimationFrame(tick);
+    }
+    state.rafId = requestAnimationFrame(tick);
+  }
+
+  function stopTimer(){
+    if (state.rafId) cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+
+  function beginRound(){
+    state.answered = false;
+    var q = state.mode === "maths" ? buildMathsQuestion(state.round) : buildFrancaisQuestion();
+    state.currentQuestion = q;
+    renderQuestion(q);
+    startTimer(timerForRound(state.mode, state.round));
+  }
+
+  function lockAnswers(){
+    var buttons = answersGrid.querySelectorAll(".answer-btn");
+    buttons.forEach(function(b){ b.disabled = true; });
+    return buttons;
+  }
+
+  function onChoiceSelected(idx){
+    if (state.mode === "francais-review") onReviewAnswer(idx);
+    else onAnswer(idx);
+  }
+
+  function recordMistakeIfFrancais(q){
+    if (state.mode !== "francais") return;
+    addMistake({
+      correct: q.choices[q.correctIndex],
+      wrong: q.choices.filter(function(_, i){ return i !== q.correctIndex; })
+    });
+    refreshReviewCard();
+  }
+
+  function onAnswer(idx){
+    if (state.answered) return;
+    state.answered = true;
+    stopTimer();
+    var q = state.currentQuestion;
+    var buttons = lockAnswers();
+    var correct = idx === q.correctIndex;
+    buttons[q.correctIndex].classList.add("good");
+    if (!correct) buttons[idx].classList.add("bad");
+
+    if (correct){
+      state.score++;
+      state.round++;
+      updateHud();
+      setTimeout(beginRound, 550);
+    } else {
+      recordMistakeIfFrancais(q);
+      setTimeout(function(){ endGame(); }, 700);
+    }
+  }
+
+  function onTimeout(){
+    if (state.answered) return;
+    state.answered = true;
+    var q = state.currentQuestion;
+    var buttons = lockAnswers();
+    buttons[q.correctIndex].classList.add("good");
+    recordMistakeIfFrancais(q);
+    setTimeout(function(){ endGame(); }, 700);
+  }
+
+  function endGame(){
+    showView("over");
+    overEyebrow.textContent = "Partie terminée";
+    retryBtn.style.display = "";
+    var previousBest = getBestScore(state.mode);
+    var best = updateBestScore(state.mode, state.score);
+    refreshBestScoresHeader();
+    finalScore.textContent = String(state.score);
+    finalScore.style.color = state.mode === "maths" ? "var(--maths)" : "var(--francais)";
+    overBest.innerHTML = state.score > previousBest && state.score > 0
+      ? "Nouveau record ! (précédent : <b>" + previousBest + "</b>)"
+      : "Meilleur score : <b>" + best + "</b>";
+  }
+
+  function resetGameChrome(){
+    stage.classList.remove("mode-review");
+    scoreLabel.textContent = "Score";
+    roundLabel.textContent = "Manche";
+  }
+
+  function startMode(mode){
+    stopTimer();
+    resetGameChrome();
+    state.mode = mode;
+    state.round = 1;
+    state.score = 0;
+    stage.classList.remove("active-maths", "active-francais");
+    stage.classList.add(mode === "maths" ? "active-maths" : "active-francais");
+    updateHud();
+    showView("game");
+    beginRound();
+  }
+
+  function startReview(){
+    var mistakes = loadMistakes();
+    if (mistakes.length === 0) return;
+    stopTimer();
+    resetGameChrome();
+    state.mode = "francais-review";
+    state.reviewQueue = shuffle(mistakes);
+    state.reviewCleared = 0;
+    state.currentReviewQuestion = null;
+    stage.classList.remove("active-maths", "active-francais");
+    stage.classList.add("active-francais", "mode-review");
+    scoreLabel.textContent = "Corrigés";
+    roundLabel.textContent = "Restant";
+    updateReviewHud();
+    showView("game");
+    beginReviewRound();
+  }
+
+  function updateReviewHud(){
+    scoreVal.textContent = String(state.reviewCleared);
+    roundVal.textContent = String(state.reviewQueue.length);
+  }
+
+  function beginReviewRound(){
+    state.answered = false;
+    updateReviewHud();
+    if (state.reviewQueue.length === 0){ finishReview(); return; }
+    var entry = state.reviewQueue[0];
+    var choices = shuffle([entry.correct].concat(entry.wrong));
+    state.currentReviewQuestion = {
+      prompt: "Quelle est la bonne orthographe ?",
+      choices: choices,
+      correctIndex: choices.indexOf(entry.correct)
+    };
+    renderQuestion(state.currentReviewQuestion);
+  }
+
+  function onReviewAnswer(idx){
+    if (state.answered) return;
+    state.answered = true;
+    var q = state.currentReviewQuestion;
+    var entry = state.reviewQueue.shift();
+    var buttons = lockAnswers();
+    var correct = idx === q.correctIndex;
+    buttons[q.correctIndex].classList.add("good");
+    if (!correct) buttons[idx].classList.add("bad");
+
+    if (correct){
+      removeMistake(entry.correct);
+      state.reviewCleared++;
+      refreshReviewCard();
+    } else {
+      state.reviewQueue.push(entry);
+    }
+    setTimeout(beginReviewRound, 650);
+  }
+
+  function finishReview(){
+    showView("over");
+    overEyebrow.textContent = "Révision terminée";
+    retryBtn.style.display = "none";
+    finalScore.textContent = String(state.reviewCleared);
+    finalScore.style.color = "var(--francais)";
+    overBest.innerHTML = state.reviewCleared > 0
+      ? "Tous les mots ont été corrigés (<b>" + state.reviewCleared + "</b>) !"
+      : "Aucune erreur n'était en attente.";
+    refreshReviewCard();
+  }
+
+  document.querySelectorAll(".mode-card").forEach(function(card){
+    card.addEventListener("click", function(){ startMode(card.dataset.mode); });
+  });
+
+  reviewCard.addEventListener("click", startReview);
+
+  document.getElementById("quitBtn").addEventListener("click", function(){
+    stopTimer();
+    stage.classList.remove("active-maths", "active-francais", "mode-review");
+    refreshReviewCard();
+    showView("home");
+  });
+
+  retryBtn.addEventListener("click", function(){
+    if (state.mode === "francais-review") startReview();
+    else startMode(state.mode);
+  });
+  document.getElementById("homeBtn").addEventListener("click", function(){
+    stage.classList.remove("active-maths", "active-francais", "mode-review");
+    refreshReviewCard();
+    showView("home");
+  });
+
+  refreshBestScoresHeader();
+  refreshReviewCard();
+})();
+</script>
