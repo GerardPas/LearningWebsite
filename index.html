@@ -791,44 +791,66 @@
     ? WORD_BANK
     : (console.warn("Chrono Défi — words.js introuvable ou vide, utilisation d'une liste de secours réduite."), SAFETY_WORD_BANK);
 
-  var WORD_PROGRESS_KEY = "chronodefi-francais-word-progress";
-  var memoryWordProgress = null;
+  /* ---- Tirage sans répétition (sac mélangé), réutilisé pour mots et homophones ---- */
+  function createShuffleBag(getBank, storageKey){
+    var memoryProgress = null;
 
-  function loadWordProgress(){
-    try {
-      var raw = localStorage.getItem(WORD_PROGRESS_KEY);
-      return raw ? JSON.parse(raw) : memoryWordProgress;
-    } catch (err){ return memoryWordProgress; }
-  }
-
-  function saveWordProgress(progress){
-    memoryWordProgress = progress;
-    try { localStorage.setItem(WORD_PROGRESS_KEY, JSON.stringify(progress)); }
-    catch (err){ /* memoryWordProgress already holds the current session state */ }
-  }
-
-  function freshWordOrder(){
-    return shuffle(ACTIVE_WORD_BANK.map(function(_, i){ return i; }));
-  }
-
-  function getNextWordEntry(){
-    var progress = loadWordProgress();
-    if (!progress || !Array.isArray(progress.order) || progress.order.length !== ACTIVE_WORD_BANK.length){
-      progress = { order: freshWordOrder(), cursor: 0 };
+    function load(){
+      try {
+        var raw = localStorage.getItem(storageKey);
+        return raw ? JSON.parse(raw) : memoryProgress;
+      } catch (err){ return memoryProgress; }
     }
-    if (progress.cursor >= progress.order.length){
-      progress = { order: freshWordOrder(), cursor: 0 };
+
+    function save(progress){
+      memoryProgress = progress;
+      try { localStorage.setItem(storageKey, JSON.stringify(progress)); }
+      catch (err){ /* memoryProgress garde l'état de la session */ }
     }
-    var wordIndex = progress.order[progress.cursor];
-    progress.cursor += 1;
-    saveWordProgress(progress);
-    return ACTIVE_WORD_BANK[wordIndex];
+
+    function freshOrder(bank, avoidFirst){
+      var order = shuffle(bank.map(function(_, i){ return i; }));
+      if (avoidFirst != null && order.length > 1 && order[0] === avoidFirst){
+        var tmp = order[0]; order[0] = order[1]; order[1] = tmp;
+      }
+      return order;
+    }
+
+    return function next(){
+      var bank = getBank();
+      var progress = load();
+      if (!progress || !Array.isArray(progress.order) || progress.order.length !== bank.length){
+        progress = { order: freshOrder(bank), cursor: 0 };
+      }
+      if (progress.cursor >= progress.order.length){
+        var lastIndex = progress.order[progress.order.length - 1];
+        progress = { order: freshOrder(bank, lastIndex), cursor: 0 };
+      }
+      var index = progress.order[progress.cursor];
+      progress.cursor += 1;
+      save(progress);
+      return bank[index];
+    };
   }
+
+  var getNextWordEntry = createShuffleBag(function(){ return ACTIVE_WORD_BANK; }, "chronodefi-francais-word-progress");
 
   function buildFrancaisQuestion(){
     var entry = getNextWordEntry();
     var choices = shuffle([entry.correct].concat(entry.wrong));
     return { prompt: "Quelle est la bonne orthographe ?", choices: choices, correctIndex: choices.indexOf(entry.correct) };
+  }
+
+  /* ---- File de rattrapage espacée (mots ratés qui reviennent, sans rythme fixe) ---- */
+  function pushDueRetry(queue, entry){
+    queue.push({ entry: entry, dueAt: state.calmSeen + randInt(4, 8) });
+  }
+
+  function popDueRetry(queue){
+    for (var i = 0; i < queue.length; i++){
+      if (queue[i].dueAt <= state.calmSeen) return queue.splice(i, 1)[0].entry;
+    }
+    return null;
   }
 
   /* ---- Homophones (dysorthographie) ---- */
@@ -842,43 +864,10 @@
     ? HOMOPHONE_BANK
     : (console.warn("Chrono Défi — homophones.js introuvable ou vide, utilisation d'une liste de secours réduite."), SAFETY_HOMOPHONE_BANK);
 
-  var HOMOPHONE_PROGRESS_KEY = "chronodefi-homophones-progress";
-  var memoryHomoProgress = null;
-
-  function loadHomoProgress(){
-    try {
-      var raw = localStorage.getItem(HOMOPHONE_PROGRESS_KEY);
-      return raw ? JSON.parse(raw) : memoryHomoProgress;
-    } catch (err){ return memoryHomoProgress; }
-  }
-
-  function saveHomoProgress(progress){
-    memoryHomoProgress = progress;
-    try { localStorage.setItem(HOMOPHONE_PROGRESS_KEY, JSON.stringify(progress)); }
-    catch (err){ /* memoryHomoProgress garde l'état de la session */ }
-  }
-
-  function getNextHomoEntry(){
-    var progress = loadHomoProgress();
-    if (!progress || !Array.isArray(progress.order) || progress.order.length !== ACTIVE_HOMOPHONE_BANK.length){
-      progress = { order: shuffle(ACTIVE_HOMOPHONE_BANK.map(function(_, i){ return i; })), cursor: 0 };
-    }
-    if (progress.cursor >= progress.order.length){
-      progress = { order: shuffle(ACTIVE_HOMOPHONE_BANK.map(function(_, i){ return i; })), cursor: 0 };
-    }
-    var idx = progress.order[progress.cursor];
-    progress.cursor += 1;
-    saveHomoProgress(progress);
-    return ACTIVE_HOMOPHONE_BANK[idx];
-  }
+  var getNextHomoEntry = createShuffleBag(function(){ return ACTIVE_HOMOPHONE_BANK; }, "chronodefi-homophones-progress");
 
   function buildHomophoneQuestion(){
-    var entry;
-    if (state.homoRetry.length && (state.calmSeen % 3 === 2)){
-      entry = state.homoRetry.shift();
-    } else {
-      entry = getNextHomoEntry();
-    }
+    var entry = popDueRetry(state.homoRetry) || getNextHomoEntry();
     var choices = shuffle([entry.correct].concat(entry.wrong));
     var correctIndex = choices.indexOf(entry.correct);
     var promptHTML = entry.sentence.replace("___", '<span class="gap">?</span>');
@@ -994,12 +983,7 @@
   }
 
   function buildCalmQuestion(){
-    var entry;
-    if (state.calmRetry.length && (state.calmSeen % 3 === 2)){
-      entry = state.calmRetry.shift();
-    } else {
-      entry = getNextWordEntry();
-    }
+    var entry = popDueRetry(state.calmRetry) || getNextWordEntry();
     var choices = shuffle([entry.correct].concat(entry.wrong));
     return {
       prompt: "Quelle est la bonne orthographe ?",
@@ -1011,7 +995,7 @@
 
   function lockAnswers(){
     var buttons = answersGrid.querySelectorAll(".answer-btn");
-    buttons.forEach(function(b){ b.disabled = true; });
+    buttons.forEach(function(b){ b.disabled = true; b.blur(); });
     return buttons;
   }
 
@@ -1084,7 +1068,7 @@
         wrong: q.choices.filter(function(_, i){ return i !== q.correctIndex; })
       });
       refreshReviewCard();
-      if (q.entry) state.calmRetry.push(q.entry);
+      if (q.entry) pushDueRetry(state.calmRetry, q.entry);
     }
     updateCalmHud();
     setTimeout(beginRound, correct ? 700 : 5000);
@@ -1103,7 +1087,7 @@
     if (correct){
       state.calmCorrect++;
     } else {
-      if (q.entry) state.homoRetry.push(q.entry);
+      if (q.entry) pushDueRetry(state.homoRetry, q.entry);
     }
     showFeedback(q.rule);
     speak(q.spokenText);
